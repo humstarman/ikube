@@ -1,27 +1,35 @@
 #!/bin/bash
-
 set -e
-
+DEFAULT_CNI=flannel
+DEFAULT_HA=nginx
+DEFAULT_PROXY=iptables
 show_help () {
 cat << USAGE
 usage: $0 [ -m MASTER(S) ] [ -n NODE(S) ] [ -v VIRTUAL-IP ] [ -p PASSORD ]
+       [ -c CNI ] [ -a HA-STRATEGY ] [ -x PROXY-STATEGY ]
 use to deploy Kubernetes.
 
     -m : Specify the IP address(es) of Master node(s). If multiple, set the images in term of csv, 
          as 'master-ip-1,master-ip-2,master-ip-3'.
+    -p : Specify the uniform password of hosts. 
+
     -n : Specify the IP address(es) of Node node(s). If multiple, set the images in term of csv, 
          as 'node-ip-1,node-ip-2,node-ip-3'.
          If not specified, no nodes would be installed.
+    -a : Specify the HA strategy, for instance: "nginx" or "vip".  
+         If not specified, use "$DEFAULT_HA" by default.
     -v : Specify the virtual IP address. 
-    -p : Specify the uniform password of hosts. 
+    -c : Specify the CNI strategy, for instance: "flannel" or "calico".  
+         If not specified, use "$DEFAULT_CNI" by default.
+    -x : Specify the proxy strategy, for instance: "iptables" or "ipvs".  
+         If not specified, use "$DEFAULT_PROXY" by default.
 
 This script should run on a Master (to be) node.
 USAGE
 exit 0
 }
-
 # Get Opts
-while getopts "hm:v:n:p:" opt; do # 选项后面的冒号表示该选项需要参数
+while getopts "hm:v:n:p:c:a:x:" opt; do # 选项后面的冒号表示该选项需要参数
     case "$opt" in
     h)  show_help
         ;;
@@ -33,6 +41,12 @@ while getopts "hm:v:n:p:" opt; do # 选项后面的冒号表示该选项需要�
         ;;
     p)  PASSWD=$OPTARG
         ;;
+    c)  CNI=$OPTARG
+        ;;
+    a)  HA=$OPTARG
+        ;;
+    x)  PROXY=$OPTARG
+        ;;
     ?)  # 当有不认识的选项的时候arg为?
         echo "unkonw argument"
         exit 1
@@ -40,7 +54,9 @@ while getopts "hm:v:n:p:" opt; do # 选项后面的冒号表示该选项需要�
     esac
 done
 [ -z "$*" ] && show_help
-
+CNI=${CNI:-"${DEFAULT_CNI}"}
+HA=${HA:-"${DEFAULT_HA}"}
+PROXY=${PROXY:-"${DEFAULT_PROXY}"}
 chk_var () {
 if [ -z "$2" ]; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [ERROR] - no input for \"$1\", try \"$0 -h\"."
@@ -49,42 +65,48 @@ if [ -z "$2" ]; then
 fi
 }
 chk_var -m $MASTER
-chk_var -v $VIP
+[[ "vip" == "${HA}" ]] && chk_var -v $VIP
 chk_var -p $PASSWD
-
+# 0 set env
 START=$(date +%s)
 WAIT=3
 STAGE=0
 STAGE_FILE=stage.init
+ANSIBE_GROUP=k8s
 if [ ! -f ./${STAGE_FILE} ]; then
-  INIT=0
   touch ./${STAGE_FILE}
   echo 0 > ./${STAGE_FILE} 
-else
-  INIT=1
 fi
 getScript () {
+  TRY=10
   URL=$1
   SCRIPT=$2
-  curl -s -o ./$SCRIPT $URL/$SCRIPT
-  chmod +x ./$SCRIPT
+  for i in $(seq -s " " 1 ${TRY}); do
+    curl -s -o ./$SCRIPT $URL/$SCRIPT
+    if cat ./$SCRIPT | grep "404: Not Found"; then
+      rm -f ./$SCRIPT
+    else
+      break
+    fi
+  done
+  if [ -f "./$SCRIPT" ]; then
+    chmod +x ./$SCRIPT
+  else
+    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [ERROR] - downloading failed !!!" 
+    echo " - $URL/$SCRIPT"
+    echo " - Please check !!!"
+    sleep 3
+    exit 1
+  fi
 }
-PROJECT="test-demo"
-BRANCH=v1.11_vip_calico
-URL=https://raw.githubusercontent.com/humstarman/${PROJECT}-impl/${BRANCH}
-TOOLS=${URL}/tools
-#TOOLS=https://raw.githubusercontent.com/humstarman/${PROJECT}-static/master/tools
-THIS_FILE=$0
-PREFIX=$THIS_FILE
-PREFIX=${PREFIX##*/}
-PREFIX=${PREFIX%.*}
-MAIN=${URL}/${PREFIX}
-###
-#if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
-###
-[[ "$(cat ./${STAGE_FILE})" == "0" ]] && echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - checking environment ... "
-# check curl & 
+PROJECT="ikube"
+BRANCH=master
+STAGES=https://raw.githubusercontent.com/humstarman/${PROJECT}-stages/${BRANCH}
+SCRIPTS=https://raw.githubusercontent.com/humstarman/${PROJECT}-scripts/${BRANCH}
+MANIFESTS=https://raw.githubusercontent.com/humstarman/${PROJECT}-manifests/${BRANCH}
 if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
+  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - checking environment ... "
+  # check curl & 
   if [ ! -x "$(command -v curl)" ]; then
     if [ -x "$(command -v yum)" ]; then
       yum makecache fast
@@ -95,175 +117,142 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
       apt-get install -y curl
     fi
   fi
-fi
-curl -s -O $MAIN/version
-[[ "$(cat ./${STAGE_FILE})" == "0" ]] && curl -s $TOOLS/check-ansible.sh | /bin/bash
-echo $MASTER > ./master.csv
-MASTER=$(echo $MASTER | tr "," " ")
-#echo $MASTER
-N_MASTER=$(echo $MASTER | wc -w)
-#echo $N_MASTER
-[[ "$(cat ./${STAGE_FILE})" == "0" ]] && echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_MASTER masters: $(cat ./master.csv)."
-if [ -z "$NODE" ]; then
-  NODE_EXISTENCE=false
-else
-  NODE_EXISTENCE=true
-  echo $NODE > ./node.csv
-fi
-if $NODE_EXISTENCE; then
-  NODE=$(echo $NODE | tr "," " ")
-  #echo ${NODE}
-  N_NODE=$(echo $NODE | wc -w)
-  #echo $N_NODE
-  [[ "$(cat ./${STAGE_FILE})" == "0" ]] && echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_NODE nodes: $(cat ./node.csv)."
-else
-  [[ "$(cat ./${STAGE_FILE})" == "0" ]] && echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - no node to install."
-fi
-echo $VIP > ./vip.info
-[[ "$(cat ./${STAGE_FILE})" == "0" ]] && echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - virtual IP: $(cat ./vip.info)."
-echo $PASSWD > ./passwd.log
-# mk env file
-FILE=info.env
-if [ ! -f "$FILE" ]; then
-  cat > $FILE << EOF
+  curl -s -O $STAGES/version
+  curl -s $SCRIPTS/check-ansible.sh | /bin/bash
+  echo $MASTER > ./master.csv
+  MASTER=$(echo $MASTER | tr "," " ")
+  #echo $MASTER
+  N_MASTER=$(echo $MASTER | wc -w)
+  #echo $N_MASTER
+  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_MASTER masters: $(cat ./master.csv)."
+  if [ -z "$NODE" ]; then
+    NODE_EXISTENCE=false
+  else
+    NODE_EXISTENCE=true
+    echo $NODE > ./node.csv
+  fi
+  if $NODE_EXISTENCE; then
+    NODE=$(echo $NODE | tr "," " ")
+    #echo ${NODE}
+    N_NODE=$(echo $NODE | wc -w)
+    #echo $N_NODE
+    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_NODE nodes: $(cat ./node.csv)."
+  else
+    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - no node to install."
+  fi
+  if [ -n "$VIP" ]; then
+    echo $VIP > ./vip.info
+    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - virtual IP: $(cat ./vip.info)."
+  fi
+  echo $PASSWD > ./passwd.log
+  # mk env file
+  FILE=info.env
+  if [ ! -f "$FILE" ]; then
+    cat > $FILE << EOF
 export MASTER="$MASTER"
 export N_MASTER=$N_MASTER
 export NODE_EXISTENCE=$NODE_EXISTENCE
 export NODE="$NODE"
 export N_NODE=$N_NODE
-export URL=$URL
 export VIP=$VIP
+export SCRIPTS=${SCRIPTS}
+export STAGES=${STAGES}
+export MANIFESTS=${MANIFESTS}
+export ANSIBE_GROUP=${ANSIBE_GROUP}
+export HA=${HA}
+export CNI=${CNI}
+export PROXY=${PROXY}
 EOF
-fi
-###
-if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
-###
-  curl -s $TOOLS/mk-ansible-available.sh | /bin/bash
+  fi
+  curl -s $SCRIPTS/mk-ansible-available.sh | /bin/bash
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - connectivity checked."
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - environment checked."
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - prepare to install."
   ## 1 stop selinux
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - shutdown Selinux."
-  curl -s -o ./shutdown-selinux.sh $TOOLS/shutdown-selinux.sh
-  ansible all -m script -a ./shutdown-selinux.sh
+  getScript $SCRIPTS shutdown-selinux.sh
+  ansible ${ANSIBLE_GROUP} -m script -a ./shutdown-selinux.sh
   ## 2 stop firewall
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - stop firewall."
-  curl -s -o ./stop-firewall.sh $TOOLS/stop-firewall.sh
-  ansible all -m script -a ./stop-firewall.sh
+  getScript $SCRIPTS stop-firewall.sh
+  ansible ${ANSIBLE_GROUP} -m script -a ./stop-firewall.sh
   ## 3 mkdirs
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - prepare directories."
-  curl -s $MAIN/batch-mkdir.sh | /bin/bash
-###
+  getScript $SCRIPTS batch-mkdir.sh
+  ansible ${ANSIBLE_GROUP} -m script -a ./batch-mkdir.sh
 fi
-###
 
 # 1 environment variables
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
-  ## 1 download scripts
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - config cluster environment variables ... "
-  #getScript $URL cluster-environment-variables.sh
-  curl -s $MAIN/cluster-environment-variables.sh | /bin/bash
+  curl -s $STAGES/cluster-environment-variables.sh | /bin/bash
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - cluster environment variables configured. "
-###
-echo $STAGE > ./${STAGE_FILE}
+  echo $STAGE > ./${STAGE_FILE}
 fi
-###
 
 # 2 generate CA pem
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
-  curl -s $MAIN/generate-ca-pem.sh | /bin/bash
-#getScript $URL generate-ca-pem.sh 
-###
+  curl -s $STAGES/generate-ca-pem.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
-###
 
 # 3 deploy ha etcd cluster
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
-  curl -s $MAIN/deploy-etcd.sh | /bin/bash
-#getScript $URL deploy-etcd.sh
-###
+  curl -s $STAGES/deploy-etcd.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
-###
 
 # 4 prepare kubernetes 
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
-### at first, install Kubernetes
-  curl -s $MAIN/install-k8s.sh | /bin/bash
-#getScript $URL install-k8s.sh
-###
+  curl -s $STAGES/install-k8s.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
-###
 
 # 5 deploy kubectl
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
-### then deploy kubectl
-  curl -s $MAIN/deploy-kubectl.sh | /bin/bash
-#getScript $URL deploy-kubectl.sh
-###
+  curl -s $STAGES/deploy-kubectl.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
-###
 
 # 6 deploy flanneld
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
-  #curl -s $MAIN/deploy-flanneld.sh | /bin/bash
-###
+  if [[ "flannel" == "$CNI" ]]; then
+    curl -s $STAGES/deploy-flanneld.sh | /bin/bash
+  fi
   echo $STAGE > ./${STAGE_FILE}
 fi
 ###
 
 # 7 deploy master 
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
-  curl -s $MAIN/deploy-master.sh | /bin/bash
-  curl -s $MAIN/deploy-ha.sh | /bin/bash
-###
+  curl -s $STAGES/deploy-master.sh | /bin/bash
+  if [[ "vip" == "$HA" ]]; then
+    curl -s $STAGES/deploy-vip-ha.sh | /bin/bash
+  fi
   echo $STAGE > ./${STAGE_FILE}
 fi
-###
 
 # 8 deploy node
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
-#getScript $URL deploy-node.sh
-  curl -s $MAIN/deploy-node.sh | /bin/bash
-###
+  curl -s $STAGES/deploy-node.sh | /bin/bash
+  if [[ "nginx" == "$HA" ]]; then
+    curl -s $STAGES/deploy-nginx-ha.sh | /bin/bash
+  fi
   echo $STAGE > ./${STAGE_FILE}
 fi
-###
 
 # 9 deploy calico 
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
-#getScript $URL deploy-node.sh
-FILE=approve-pem.sh
+  FILE=approve-pem.sh
   cat > $FILE << EOF
 #!/bin/bash
 CSRS=\$(kubectl get csr | grep Pending | awk -F ' ' '{print \$1}')
@@ -274,25 +263,20 @@ if [ -n "\$CSRS" ]; then
 fi
 EOF
   chmod +x $FILE
-  sleep $WAIT 
-  ./${FILE}
-  curl -s $MAIN/deploy-calico.sh | /bin/bash
-###
+  if [[ "calico" == "$CNI" ]]; then
+    ./${FILE}
+    curl -s $STAGES/deploy-calico.sh | /bin/bash
+  fi
   echo $STAGE > ./${STAGE_FILE}
 fi
-###
 
 # 10 clearance 
 STAGE=$[${STAGE}+1]
-###
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-###
   [ -f "./node.csv" ] || touch node.csv
-  curl -s $TOOLS/clearance.sh | /bin/bash
-###
+  curl -s $SCRIPTS/clearance.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
-###
 
 # ending
 MASTER=$(sed s/","/" "/g ./master.csv)
@@ -315,7 +299,7 @@ echo " - Total nodes: $TOTAL"
 echo " - With masters: $N_MASTER"
 ## make backup
 THIS_DIR=$(cd "$(dirname "$0")";pwd)
-curl -s $TOOLS/mk-backup.sh | /bin/bash
+curl -s $SCRIPTS/mk-backup.sh | /bin/bash
 echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info from $THIS_DIR to /var/k8s/bak."
 sleep $WAIT 
 exit 0

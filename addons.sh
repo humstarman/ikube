@@ -59,9 +59,9 @@ done
 PROJECT="test-demo"
 # https://raw.githubusercontent.com/humstarman/test-demo-addons/master/coredns/coredns.yaml
 <<<<<<< HEAD
-BRANCH=v1.11_vip_calico
+BRANCH=master
 =======
-BRANCH=v1.11_vip_calico
+BRANCH=master
 >>>>>>> v1.11_flannel
 URL=https://raw.githubusercontent.com/humstarman/${PROJECT}-impl/${BRANCH}
 TOOLS=${URL}/tools
