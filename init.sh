@@ -72,7 +72,7 @@ START=$(date +%s)
 WAIT=3
 STAGE=0
 STAGE_FILE=stage.init
-ANSIBE_GROUP=k8s
+ANSIBLE_GROUP=k8s
 if [ ! -f ./${STAGE_FILE} ]; then
   touch ./${STAGE_FILE}
   echo 0 > ./${STAGE_FILE} 
@@ -158,7 +158,7 @@ export VIP=$VIP
 export SCRIPTS=${SCRIPTS}
 export STAGES=${STAGES}
 export MANIFESTS=${MANIFESTS}
-export ANSIBE_GROUP=${ANSIBE_GROUP}
+export ANSIBLE_GROUP=${ANSIBLE_GROUP}
 export HA=${HA}
 export CNI=${CNI}
 export PROXY=${PROXY}
