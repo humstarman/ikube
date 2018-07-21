@@ -252,25 +252,37 @@ fi
 # 9 deploy calico 
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-  FILE=approve-pem.sh
-  cat > $FILE << EOF
-#!/bin/bash
-CSRS=\$(kubectl get csr | grep Pending | awk -F ' ' '{print \$1}')
-if [ -n "\$CSRS" ]; then
-  for CSR in \$CSRS; do
-    kubectl certificate approve \$CSR
-  done
-fi
-EOF
-  chmod +x $FILE
   if [[ "calico" == "$CNI" ]]; then
-    ./${FILE}
     curl -s $STAGES/deploy-calico.sh | /bin/bash
   fi
   echo $STAGE > ./${STAGE_FILE}
 fi
 
-# 10 clearance 
+# 10 approve certificate
+STAGE=$[${STAGE}+1]
+if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+  FILE=approve-pem.sh
+  cat > $FILE <<"EOF"
+#!/bin/bash
+CSRS=$(kubectl get csr | grep Pending | awk -F ' ' '{print $1}')
+if [ -n "$CSRS" ]; then
+  for CSR in $CSRS; do
+    kubectl certificate approve $CSR
+  done
+fi
+EOF
+  chmod +x $FILE
+  if [[ "vip" == "$HA" ]]; then
+    ./${FILE}
+  fi
+  if [[ "nginx" == "$HA" ]]; then
+    echo " - For a little while, use the script ./$FILE to approve kubelet certificate."
+    echo " - use 'kubectl get csr' to check the register."
+  fi
+  echo $STAGE > ./${STAGE_FILE}
+fi
+
+# 11 clearance 
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
   [ -f "./node.csv" ] || touch node.csv
