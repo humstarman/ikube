@@ -272,6 +272,7 @@ if [ -n "$CSRS" ]; then
 fi
 EOF
   chmod +x $FILE
+  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - approve certificate:"
   if [[ "vip" == "$HA" ]]; then
     ./${FILE}
   fi
