@@ -184,7 +184,7 @@ fi
 
 # 1 environment variables
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - config cluster environment variables ... "
   curl -s $STAGES/cluster-environment-variables.sh | /bin/bash
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - cluster environment variables configured. "
@@ -193,35 +193,35 @@ fi
 
 # 2 generate CA pem
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/generate-ca-pem.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 3 deploy ha etcd cluster
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/deploy-etcd.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 4 prepare kubernetes 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/install-k8s.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 5 deploy kubectl
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/deploy-kubectl.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 6 deploy flanneld
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   if [[ "flannel" == "$CNI" ]]; then
     curl -s $STAGES/deploy-flanneld.sh | /bin/bash
   fi
@@ -231,7 +231,7 @@ fi
 
 # 7 deploy master 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/deploy-master.sh | /bin/bash
   if [[ "vip" == "$HA" ]]; then
     curl -s $STAGES/deploy-vip-ha.sh | /bin/bash
@@ -241,7 +241,7 @@ fi
 
 # 8 deploy node
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/deploy-node.sh | /bin/bash
   if [[ "nginx" == "$HA" ]]; then
     curl -s $STAGES/deploy-nginx-ha.sh | /bin/bash
@@ -251,7 +251,7 @@ fi
 
 # 9 deploy calico 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   if [[ "calico" == "$CNI" ]]; then
     curl -s $STAGES/deploy-calico.sh | /bin/bash
   fi
@@ -260,7 +260,7 @@ fi
 
 # 10 approve certificate
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   FILE=approve-pem.sh
   cat > $FILE <<"EOF"
 #!/bin/bash
@@ -285,7 +285,7 @@ fi
 
 # 11 clearance 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   [ -f "./node.csv" ] || touch node.csv
   curl -s $SCRIPTS/clearance.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
