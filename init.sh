@@ -13,6 +13,7 @@ use to deploy Kubernetes.
          as 'master-ip-1,master-ip-2,master-ip-3'.
     -p : Specify the uniform password of hosts. 
 
+    advanced setting:
     -n : Specify the IP address(es) of Node node(s). If multiple, set the images in term of csv, 
          as 'node-ip-1,node-ip-2,node-ip-3'.
          If not specified, no nodes would be installed.
@@ -24,12 +25,18 @@ use to deploy Kubernetes.
     -x : Specify the proxy strategy, for instance: "iptables" or "ipvs".  
          If not specified, use "$DEFAULT_PROXY" by default.
 
+    debug setting:
+    -b : Specify the branch of code. 
+         If not specified, use "master" by default.
+    -s : Specify the branch of stage scripts. 
+         If not specified, set the value of -b by default.
+
 This script should run on a Master (to be) node.
 USAGE
 exit 0
 }
 # Get Opts
-while getopts "hm:v:n:p:c:a:x:" opt; do # 选项后面的冒号表示该选项需要参数
+while getopts "hm:v:n:p:c:a:x:b:s:" opt; do # 选项后面的冒号表示该选项需要参数
     case "$opt" in
     h)  show_help
         ;;
@@ -47,6 +54,10 @@ while getopts "hm:v:n:p:c:a:x:" opt; do # 选项后面的冒号表示该选项�
         ;;
     x)  PROXY=$OPTARG
         ;;
+    b)  BRANCH=$OPTARG
+        ;;
+    s)  STAGES_BRANCH=$OPTARG
+        ;;
     ?)  # 当有不认识的选项的时候arg为?
         echo "unkonw argument"
         exit 1
@@ -56,6 +67,8 @@ done
 [ -z "$*" ] && show_help
 CNI=${CNI:-"${DEFAULT_CNI}"}
 HA=${HA:-"${DEFAULT_HA}"}
+BRANCH=${BRANCH:-"master"}
+STAGES_BRANCH=${STAGES_BRANCH:-"${BRANCH}"}
 PROXY=${PROXY:-"${DEFAULT_PROXY}"}
 chk_var () {
 if [ -z "$2" ]; then
@@ -100,8 +113,7 @@ getScript () {
   fi
 }
 PROJECT="ikube"
-BRANCH=master
-STAGES=https://raw.githubusercontent.com/humstarman/${PROJECT}-stages/${BRANCH}
+STAGES=https://raw.githubusercontent.com/humstarman/${PROJECT}-stages/${STAGES_BRANCH}
 SCRIPTS=https://raw.githubusercontent.com/humstarman/${PROJECT}-scripts/${BRANCH}
 MANIFESTS=https://raw.githubusercontent.com/humstarman/${PROJECT}-manifests/${BRANCH}
 if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
