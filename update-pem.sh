@@ -97,7 +97,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   curl -s $SCRIPTS/mk-ansible-available.sh | /bin/bash 
   getScript $STAGES clear-expired-pem.sh
   ansible ${ANSIBLE_GROUP} -m script -a ./clear-expired-pem.sh
-  curl -s $STAGES/check-cfssl.sh | /bin/bash 
+  curl -s $SCRIPTS/check-cfssl.sh | /bin/bash 
 fi
 
 # 1 CA
