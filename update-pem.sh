@@ -103,7 +103,7 @@ fi
 
 # 1 CA
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   getScript $STAGES update-ca-pem.sh
   ./update-ca-pem.sh -y $YEAR -g ${ANSIBLE_GROUP}
   echo $STAGE > ./${STAGE_FILE}
@@ -111,21 +111,21 @@ fi
 
 # 2 etcd 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/update-etcd-pem.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 3 kubectl 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/update-kubectl-pem.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 4 flanneld 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   if [[ "flannel" == "${CNI}" ]]; then
     curl -s $STAGES/update-flanneld-pem.sh | /bin/bash 
   fi
@@ -134,46 +134,48 @@ fi
 
 # 5 kubernetes 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/update-kubernetes-pem.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 6 kubelet 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/update-kubelet-pem.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 7 kube-proxy 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/update-kube-proxy-pem.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 8 restart services 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   curl -s $STAGES/restart-svc.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
 # 9 clearance 
 STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - Kubernetes permmisson has been updated. "
   curl -s $SCRIPTS/clearance.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
-# ending
-echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - As updating permissons, re-approving certificate is needed."
-echo " - sleep $WAIT sec, then apporve."
-FILE=approve-pem.sh
-if [ ! -f "$FILE" ]; then
-  cat > $FILE <<"EOF"
+# 10 approve permissions
+STAGE=$[${STAGE}+1]
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
+  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - As updating permissons, re-approving certificate is needed."
+  echo " - sleep $WAIT sec, then apporve."
+  FILE=approve-pem.sh
+  if [ ! -f "$FILE" ]; then
+    cat > $FILE <<"EOF"
 #!/bin/bash
 CSRS=$(kubectl get csr | grep Pending | awk -F ' ' '{print $1}')
 if [ -n "$CSRS" ]; then
@@ -182,14 +184,25 @@ if [ -n "$CSRS" ]; then
   done
 fi
 EOF
-  chmod +x $FILE
+    chmod +x $FILE
+  fi
+  for i in $(seq -s " " 1 $WAIT); do
+    sleep $WAIT
+    ./${FILE}
+  done
+  echo " - now, use 'kubectl get node' to check the status."
+  kubectl get node
+  echo " - if there is/are NotReady node/nodes, use 'kubectl get csr' to check the register status."
+  echo " - use ./$FILE to approve certificate."
+  echo $STAGE > ./${STAGE_FILE}
 fi
-for i in $(seq -s " " 1 $WAIT); do
-  sleep $WAIT
-  ./${FILE}
-done
-echo " - now, use 'kubectl get node' to check the status."
-kubectl get node
-echo " - if there is/are NotReady node/nodes, use 'kubectl get csr' to check the register status."
-echo " - use ./$FILE to approve certificate."
+
+# 11 calico 
+STAGE=$[${STAGE}+1]
+if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
+  if [[ "calico" == "${CNI}" ]]; then
+    curl -s $STAGES/update-calico.sh | /bin/bash
+  fi
+  echo $STAGE > ./${STAGE_FILE}
+fi
 exit 0
