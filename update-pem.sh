@@ -104,7 +104,7 @@ fi
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
   getScript $STAGES update-ca-pem.sh
-  ./update-ca.pem.sh -y $YEAR -g ${ANSIBLE_GROUP}
+  ./update-ca-pem.sh -y $YEAR -g ${ANSIBLE_GROUP}
   echo $STAGE > ./${STAGE_FILE}
 fi
 
