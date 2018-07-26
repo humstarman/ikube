@@ -3,10 +3,12 @@ set -e
 DEFAULT_CNI=flannel
 DEFAULT_HA=nginx
 DEFAULT_PROXY=iptables
+DEFAULT_VERSION=v1.11.0
 show_help () {
 cat << USAGE
 usage: $0 [ -m MASTER(S) ] [ -n NODE(S) ] [ -v VIRTUAL-IP ] [ -p PASSORD ]
-       [ -c CNI ] [ -a HA-STRATEGY ] [ -x PROXY-STATEGY ]
+       [ -c CNI ] [ -a HA-STRATEGY ] [ -x PROXY-STATEGY ] [ -k KUBE_VERSION ]
+       [ -b BRANCH ] [ -s SCRIPT-BRANCH ]
 use to deploy Kubernetes.
 
     -m : Specify the IP address(es) of Master node(s). If multiple, set the images in term of csv, 
@@ -24,6 +26,8 @@ use to deploy Kubernetes.
          If not specified, use "$DEFAULT_CNI" by default.
     -x : Specify the proxy strategy, for instance: "iptables" or "ipvs".  
          If not specified, use "$DEFAULT_PROXY" by default.
+    -k : Specify the version of Kubernetes to install.  
+         If not specified, install "$DEFAULT_VERSION" by default.
 
     debug setting:
     -b : Specify the branch of code. 
@@ -36,7 +40,7 @@ USAGE
 exit 0
 }
 # Get Opts
-while getopts "hm:v:n:p:c:a:x:b:s:" opt; do # 选项后面的冒号表示该选项需要参数
+while getopts "hm:v:n:p:c:a:x:k:b:s:" opt; do # 选项后面的冒号表示该选项需要参数
     case "$opt" in
     h)  show_help
         ;;
@@ -54,6 +58,8 @@ while getopts "hm:v:n:p:c:a:x:b:s:" opt; do # 选项后面的冒号表示该选�
         ;;
     x)  PROXY=$OPTARG
         ;;
+    k)  VERSION=$OPTARG
+        ;;
     b)  BRANCH=$OPTARG
         ;;
     s)  STAGES_BRANCH=$OPTARG
@@ -67,6 +73,7 @@ done
 [ -z "$*" ] && show_help
 CNI=${CNI:-"${DEFAULT_CNI}"}
 HA=${HA:-"${DEFAULT_HA}"}
+VERSION=${VERSION:-"${DEFAULT_VERSION}"}
 BRANCH=${BRANCH:-"master"}
 STAGES_BRANCH=${STAGES_BRANCH:-"${BRANCH}"}
 PROXY=${PROXY:-"${DEFAULT_PROXY}"}
@@ -116,6 +123,7 @@ PROJECT="ikube"
 STAGES=https://raw.githubusercontent.com/humstarman/${PROJECT}-stages/${STAGES_BRANCH}
 SCRIPTS=https://raw.githubusercontent.com/humstarman/${PROJECT}-scripts/${BRANCH}
 MANIFESTS=https://raw.githubusercontent.com/humstarman/${PROJECT}-manifests/${BRANCH}
+VERSION=https://raw.githubusercontent.com/humstarman/${PROJECT}-version/${VERSION}
 if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - checking environment ... "
   # check curl & 
@@ -129,7 +137,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
       apt-get install -y curl
     fi
   fi
-  curl -s -O $STAGES/version
+  curl -s -O ${VERSION}/version
   curl -s $SCRIPTS/check-ansible.sh | /bin/bash
   echo $MASTER > ./master.csv
   MASTER=$(echo $MASTER | tr "," " ")
@@ -174,6 +182,7 @@ export ANSIBLE_GROUP=${ANSIBLE_GROUP}
 export HA=${HA}
 export CNI=${CNI}
 export PROXY=${PROXY}
+export VERSION=${VERSION}
 EOF
   fi
   curl -s $SCRIPTS/mk-ansible-available.sh | /bin/bash
