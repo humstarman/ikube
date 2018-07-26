@@ -88,6 +88,7 @@ EOF
 chmod +x ./$BIN
 ./$BIN
 source ./info.env
+WAIT=3
 
 # 0 clear expired permission & check cfssl tool
 if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
