@@ -4,17 +4,18 @@ RUN=false
 DEFAULT_C=true
 DEFAULT_PORT=5000
 DEFAULT_CLUSTER_IP="10.254.0.50"
-LOCAL_INSTALL=false
 show_help () {
 cat << USAGE
-usage: $0 [ -r RUN-FLAG ] [ -y YEAR ]
+usage: $0 [ -r RUN-FLAG ] [ -o OMIT-COMMON-ADDONS ] [ -l DOCKER-LOCAL-REGISTRY ]
+       [ -i LOCAL-REGISTRY-IP ] [ -p LOCAL-REGISTRY-PORT ]
+       [ -c LOCAL-REGISTRY-CLUSTER-IP ] [ -q PORT-FOR-LOCAL-REGISTRY-CLUSTER-PORT ]
 use to install addons for Kubernetes.
 
     -r : Specify the flag to run.
-    -a : Specify the flag to install common plug-ins.
+    -o : Specify the flag to omit the install common plug-ins.
          If not specified, install SkyDNS, Dashboard, Prometheus, 
          Nginx Ingress by default.
-         If not installed the above addons, set the flag to false.
+         If not installed the above addons, set the flag.
 
     Docker local registry:
     -l : Specify the flag to install a local registry of Docker.
@@ -38,7 +39,7 @@ while getopts "ha:rli:p:c:q:" opt; do # 选项后面的冒号表示该选项需�
         ;;
     r)  RUN=true
         ;;
-    a)  COMMON_ADDONS=$OPTARG
+    o)  OMIT=true
         ;;
     l)  LOCAL_INSTALL=true
         ;;
@@ -68,11 +69,10 @@ if ! $RUN; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [ERROR] - set the -r flag to run."
   exit 1
 fi
-COMMON_ADDONS=${COMMON_ADDONS:-"${DEFAULT_C}"}
-[ "true" == "$LOCAL_INSTALL" ] && chk_var -i $LOCAL_REGISTRY_IP
-[ "true" == "$LOCAL_INSTALL" ] && LOCAL_REGISTRY_PORT=${LOCAL_REGISTRY_PORT:-"${DEFAULT_PORT}"} 
-[ "true" == "$LOCAL_INSTALL" ] && LOCAL_REGISTRY_CLUSTER_IP=${LOCAL_REGISTRY_CLUSTER_IP:-"${DEFAULT_CLUSTER_IP}"} 
-[ "true" == "$LOCAL_INSTALL" ] && LOCAL_REGISTRY_CLUSTER_IP_PORT=${LOCAL_REGISTRY_CLUSTER_IP_PORT:-"${DEFAULT_PORT}"} 
+[[ -n "$LOCAL_INSTALL" ]] && chk_var -i $LOCAL_REGISTRY_IP
+[[ -n "$LOCAL_INSTALL" ]] && LOCAL_REGISTRY_PORT=${LOCAL_REGISTRY_PORT:-"${DEFAULT_PORT}"} 
+[[ -n "$LOCAL_INSTALL" ]] && LOCAL_REGISTRY_CLUSTER_IP=${LOCAL_REGISTRY_CLUSTER_IP:-"${DEFAULT_CLUSTER_IP}"} 
+[[ -n "$LOCAL_INSTALL" ]] && LOCAL_REGISTRY_CLUSTER_IP_PORT=${LOCAL_REGISTRY_CLUSTER_IP_PORT:-"${DEFAULT_PORT}"} 
 STAGE=0
 STAGE_FILE=stage.addons
 if [ ! -f ./${STAGE_FILE} ]; then
@@ -141,7 +141,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
       apt-get install -y curl
     fi
   fi
-  if [ "true" == "$LOCAL_INSTALL" ]; then
+  if [[ -n "$LOCAL_INSTALL" ]]; then
     BIN="get-through-hosts.sh"
     getScript $BIN $SCRIPTS
     ./${BIN} -i ${LOCAL_REGISTRY_IP}
@@ -151,7 +151,7 @@ fi
 # 1 CoreDNS
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-  if [[ "true" == "$COMMON_ADDONS" ]]; then
+  if [[ -z "${OMIT}" ]]; then
     curl -s $STAGES/deploy-coredns.sh | /bin/bash 
   fi
   echo $STAGE > ./${STAGE_FILE}
@@ -160,7 +160,7 @@ fi
 # 2 Dashboard
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-  if [[ "true" == "$COMMON_ADDONS" ]]; then
+  if [[ -z "${OMIT}" ]]; then
     curl -s $STAGES/deploy-dashborad.sh | /bin/bash 
   fi
   echo $STAGE > ./${STAGE_FILE}
@@ -169,7 +169,7 @@ fi
 # 3 Prometheus 
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-  if [[ "true" == "$COMMON_ADDONS" ]]; then
+  if [[ -z "${OMIT}" ]]; then
     curl -s $STAGES/deploy-prometheus.sh | /bin/bash 
   fi
   echo $STAGE > ./${STAGE_FILE}
@@ -178,7 +178,7 @@ fi
 # 4 nginx ingress
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-  if [[ "true" == "$COMMON_ADDONS" ]]; then
+  if [[ -z "${OMIT}" ]]; then
     curl -s $STAGES/deploy-nginx-ingress.sh | /bin/bash 
   fi
   echo $STAGE > ./${STAGE_FILE}
@@ -187,7 +187,7 @@ fi
 # 5 docker local registry 
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-  if [[ "true" == "$LOCAL_INSTALL" ]]; then
+  if [[ -n "$LOCAL_INSTALL" ]]; then
     getScript deploy-docker-local-registry.sh $STAGES
     ./deploy-docker-local-registry.sh -i ${LOCAL_REGISTRY_IP} -p ${LOCAL_REGISTRY_PORT} -c ${LOCAL_REGISTRY_CLUSTER_IP} -q ${LOCAL_REGISTRY_CLUSTER_IP_PORT}
   fi
