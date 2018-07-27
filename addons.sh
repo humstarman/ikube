@@ -144,7 +144,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   fi
   if [[ -n "$LOCAL_INSTALL" ]]; then
     BIN="get-through-hosts.sh"
-    getScript $BIN $SCRIPTS
+    getScript $SCRIPTS $BIN
     ./${BIN} -i ${LOCAL_REGISTRY_IP}
   fi
 fi
@@ -189,8 +189,9 @@ fi
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
   if [[ -n "$LOCAL_INSTALL" ]]; then
-    getScript deploy-docker-local-registry.sh $STAGES
-    ./deploy-docker-local-registry.sh -i ${LOCAL_REGISTRY_IP} -p ${LOCAL_REGISTRY_PORT} -c ${LOCAL_REGISTRY_CLUSTER_IP} -q ${LOCAL_REGISTRY_CLUSTER_IP_PORT}
+    BIN=getScript deploy-docker-local-registry.sh
+    getScript $STAGES $BIN
+    ./$BIN -i ${LOCAL_REGISTRY_IP} -p ${LOCAL_REGISTRY_PORT} -c ${LOCAL_REGISTRY_CLUSTER_IP} -q ${LOCAL_REGISTRY_CLUSTER_IP_PORT}
   fi
   echo $STAGE > ./${STAGE_FILE}
 fi
