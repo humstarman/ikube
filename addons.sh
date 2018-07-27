@@ -34,7 +34,7 @@ USAGE
 exit 0
 }
 # Get Opts
-while getopts "ha:rli:p:c:q:" opt; do # 选项后面的冒号表示该选项需要参数
+while getopts "horli:p:c:q:" opt; do # 选项后面的冒号表示该选项需要参数
     case "$opt" in
     h)  show_help
         ;;
