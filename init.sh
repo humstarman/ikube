@@ -103,7 +103,7 @@ getScript () {
   SCRIPT=$2
   for i in $(seq -s " " 1 ${TRY}); do
     curl -s -o ./$SCRIPT $URL/$SCRIPT
-    if cat ./$SCRIPT | grep "404: Not Found"; then
+    if cat ./$SCRIPT | grep "^404: Not Found"; then
       rm -f ./$SCRIPT
     else
       break
