@@ -9,6 +9,7 @@ cat << USAGE
 usage: $0 [ -r RUN-FLAG ] [ -o OMIT-COMMON-ADDONS ] [ -l DOCKER-LOCAL-REGISTRY ]
        [ -i LOCAL-REGISTRY-IP ] [ -p LOCAL-REGISTRY-PORT ]
        [ -c LOCAL-REGISTRY-CLUSTER-IP ] [ -q PORT-FOR-LOCAL-REGISTRY-CLUSTER-PORT ]
+
 use to install addons for Kubernetes.
 
     -r : Specify the flag to run.
