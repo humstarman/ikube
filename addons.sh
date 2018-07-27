@@ -143,6 +143,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
     fi
   fi
   if [[ -n "$LOCAL_INSTALL" ]]; then
+    curl -s $SCRIPTS/check-ansible.sh | /bin/bash
     BIN="get-through-hosts.sh"
     getScript $SCRIPTS $BIN
     ./${BIN} -i ${LOCAL_REGISTRY_IP}
