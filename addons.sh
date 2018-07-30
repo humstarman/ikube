@@ -190,7 +190,7 @@ fi
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
   if [[ -n "$LOCAL_INSTALL" ]]; then
-    BIN=getScript deploy-docker-local-registry.sh
+    BIN=deploy-docker-local-registry.sh
     getScript $STAGES $BIN
     ./$BIN -i ${LOCAL_REGISTRY_IP} -p ${LOCAL_REGISTRY_PORT} -c ${LOCAL_REGISTRY_CLUSTER_IP} -q ${LOCAL_REGISTRY_CLUSTER_IP_PORT}
   fi
