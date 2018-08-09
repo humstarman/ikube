@@ -7,16 +7,16 @@ DEFAULT_VERSION=v1.11.0
 show_help () {
 cat << USAGE
 usage: $0 [ -m MASTER(S) ] [ -n NODE(S) ] [ -v VIRTUAL-IP ] [ -p PASSORD ]
-       [ -c CNI ] [ -a HA-STRATEGY ] [ -x PROXY-STATEGY ] [ -k KUBE_VERSION ]
+       [ -c CNI ] [ -a HA-STRATEGY ] [ -x PROXY-STATEGY ] [ -k KUBE-VERSION ]
        [ -b BRANCH ] [ -s SCRIPT-BRANCH ]
 use to deploy Kubernetes.
 
-    -m : Specify the IP address(es) of Master node(s). If multiple, set the images in term of csv, 
+    -m : Specify the IP address(es) of Master node(s). If multiple, set the masters in term of csv, 
          as 'master-ip-1,master-ip-2,master-ip-3'.
     -p : Specify the uniform password of hosts. 
 
     advanced setting:
-    -n : Specify the IP address(es) of Node node(s). If multiple, set the images in term of csv, 
+    -n : Specify the IP address(es) of Node node(s). If multiple, set the nodes in term of csv, 
          as 'node-ip-1,node-ip-2,node-ip-3'.
          If not specified, no nodes would be installed.
     -a : Specify the HA strategy, for instance: "nginx" or "vip".  
