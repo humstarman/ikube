@@ -328,5 +328,6 @@ if [ -n "$CSRS" ]; then
   done
 fi
 EOF
+chmod +x $FILE
 sleep $WAIT 
 exit 0
