@@ -282,25 +282,8 @@ fi
 # 10 approve certificate
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
-  FILE=approve-pem.sh
-  cat > $FILE <<"EOF"
-#!/bin/bash
-CSRS=$(kubectl get csr | grep Pending | awk -F ' ' '{print $1}')
-if [ -n "$CSRS" ]; then
-  for CSR in $CSRS; do
-    kubectl certificate approve $CSR
-  done
-fi
-EOF
-  chmod +x $FILE
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - approve certificate:"
-  if [[ "vip" == "$HA" ]]; then
-    ./${FILE}
-  fi
-  if [[ "nginx" == "$HA" ]]; then
-    echo " - For a little while, use the script ./$FILE to approve kubelet certificate."
-    echo " - use 'kubectl get csr' to check the register."
-  fi
+  curl -s $SCRIPTS/approve-pem.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
 

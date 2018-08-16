@@ -1,97 +1,85 @@
 #!/bin/bash
+
 set -e
+
+# set env
+START=$(date +%s)
+WAIT=3
+STAGE=0
+STAGE_FILE=stage.node
+if [ ! -f ./${STAGE_FILE} ]; then
+  INIT=0
+  touch ./${STAGE_FILE}
+  echo 0 > ./${STAGE_FILE} 
+else
+  INIT=1
+fi
+getScript () {
+  URL=$1
+  SCRIPT=$2
+  curl -s -o ./$SCRIPT $URL/$SCRIPT
+  chmod +x ./$SCRIPT
+}
 show_help () {
 cat << USAGE
-usage: $0 [ -r ROLE ] [ -i IP(s) ]
-
-use to add node(s) to Kubernetes.
-
-    -r : Specify the role of the new node(s) to add, for instance: "master" or "node". 
-    -i : Specify the IP address(es) of new node(s). If multiple, set the nodes in term of csv, 
-         as 'ip-1,ip-2,ip-3'.
-
-This script should run on a Master (to be) node.
+usage: $0
+  - This script is for joining node(s) to Kubernetes cluster.
+  ===
+  - This script MUST run on a Kubernets MASTER !!!
+  ===
+  - The info about new node(s) should be offered.
+  - As an instance:
+  - generate a file named new.csv,
+  - new node IPs are in terms of CSV, as {IP_1},{IP_2},{IP_3}.
+  -
 USAGE
+if [[ "0" == "$INIT" ]]; then
+  cat << USAGE
+  ---
+  ---
+  ---
+  If you run the script for the first time,
+  the help document shown by default.
+  Re-run the script to function.
+  ---
+USAGE
+  FILE=new.csv.tmpl
+  if [ ! -f "$FILE" ]; then
+    touch $FILE
+    echo "1.1.1.1,1.1.1.2,1.1.1.3" > $FILE
+    sed -i s/" "/","/g $FILE
+  fi
+fi
+sleep $WAIT
 exit 0
 }
+if [[ "0" == "$INIT" ]]; then
+  show_help
+fi  
 # Get Opts
-while getopts "hr:i:" opt; do # 选项后面的冒号表示该选项需要参数
+while getopts "h" opt; do 
     case "$opt" in
     h)  show_help
         ;;
-    r)  ROLE=$OPTARG # 参数存在$OPTARG中
-        ;;
-    i)  IPS=$OPTARG
-        ;;
-    ?)  # 当有不认识的选项的时候arg为?
-        echo "unkonw argument"
+    ?)
+        echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [ERROR] - unkonw argument."
         exit 1
         ;;
     esac
 done
-[ -z "$*" ] && show_help
-chk_var () {
-if [ -z "$2" ]; then
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [ERROR] - no input for \"$1\", try \"$0 -h\"."
-  sleep 3
-  exit 1
-fi
-}
-chk_var -r $ROLE
-chk_var -i $IPS
-STAGE=0
-STAGE_FILE=stage.addons
-if [ ! -f ./${STAGE_FILE} ]; then
-  touch ./${STAGE_FILE}
-  echo 0 > ./${STAGE_FILE}
-fi
-getScript () {
-  TRY=10
-  URL=$1
-  SCRIPT=$2
-  for i in $(seq -s " " 1 ${TRY}); do
-    curl -s -o ./$SCRIPT $URL/$SCRIPT
-    if cat ./$SCRIPT | grep "^404: Not Found"; then
-      rm -f ./$SCRIPT
-    else
-      break
-    fi
-  done
-  if [ -f "./$SCRIPT" ]; then
-    chmod +x ./$SCRIPT
-  else
-    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [ERROR] - downloading failed !!!" 
-    echo " - $URL/$SCRIPT"
-    echo " - Please check !!!"
-    sleep 3
-    exit 1
-  fi
-}
-# restore from backup
-BIN=restore-from-backup.sh
-cat > ./$BIN<<"EOF"
-#!/bin/bash
-set -e
-# 0 set env 
-BAK_DIR=/var/k8s/bak
-getBackup () {
-  BAK_DIR=${1:-"/var/k8s/bak"}
-  yes | cp -r $BAK_DIR/* ./
-}
-# 1 restore from backup
-if [ -d "$BAK_DIR" ]; then
-  getBackup $BAK_DIR
-else
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [ERROR] - no $BAK_DIR found !!!"
-  sleep 3
-  exit 1
-fi
-exit 0
-EOF
-chmod +x ./$BIN
-./$BIN
-source ./info.env
-WAIT=3
+PROJECT="test-demo"
+<<<<<<< HEAD
+BRANCH=master
+=======
+BRANCH=master
+>>>>>>> v1.11_flannel
+URL=https://raw.githubusercontent.com/humstarman/${PROJECT}-impl/${BRANCH}
+TOOLS=${URL}/tools
+THIS_FILE=$0
+PREFIX=$THIS_FILE
+PREFIX=${PREFIX##*/}
+PREFIX=${PREFIX%.*}
+MAIN=${URL}/${PREFIX}
 
 # 0 check environment 
 if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
@@ -99,7 +87,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   curl -s $TOOLS/restore-info-from-backup.sh | /bin/bash 
   curl -s $TOOLS/check-needed-files.sh | /bin/bash 
   curl -s $TOOLS/check-new-one.sh | /bin/bash 
-  curl -s $TOOLS/detect-conflict.sh | /bin/bash
+  curl -s $TOOLS/detect-conflict.sh | /bin/bash 
   curl -s $TOOLS/check-ansible.sh | /bin/bash 
   curl -s $TOOLS/mk-ansible-available.sh | /bin/bash
   ## 1 shutdown selinux
@@ -128,49 +116,35 @@ if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
   echo $STAGE > ./${STAGE_FILE}
 fi
 
-# 3 deploy etcd 
+# 3 prepare kubernetes node componenets
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-  curl -s $MAIN/cp-etcd-pem.sh | /bin/bash 
+  curl -s $MAIN/cp-kubernetes-node-components.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
-# 4 prepare kubernetes master componenets
-STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-  curl -s $MAIN/cp-kubernetes-master-components.sh | /bin/bash 
-  echo $STAGE > ./${STAGE_FILE}
-fi
-
-# 5 cp kubectl 
+# 4 cp kubectl 
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
   curl -s $MAIN/cp-kubectl.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
-# 6 deploy flanneld 
+# 5 deploy flanneld 
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
   curl -s $MAIN/deploy-flanneld.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
-# 7 deploy master 
-STAGE=$[${STAGE}+1]
-if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
-  curl -s $MAIN/deploy-master.sh | /bin/bash 
-  echo $STAGE > ./${STAGE_FILE}
-fi
-
-# 8 deploy node 
+# 5 deploy node 
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
   curl -s $MAIN/deploy-node.sh | /bin/bash 
   echo $STAGE > ./${STAGE_FILE}
 fi
 
-# 9 clearance 
+# 6 clearance 
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" < "$STAGE" ]]; then
   curl -s $TOOLS/clearance.sh | /bin/bash
@@ -223,10 +197,9 @@ fi
 echo " - For a little while, use the script ./$FILE to approve kubelet certificate."
 echo " - use 'kubectl get csr' to check the register."
 ## re-set env
-curl -s $TOOLS/re-set-env-after-master.sh | /bin/bash
+curl -s $TOOLS/re-set-env-after-node.sh | /bin/bash
 ## make backup
 THIS_DIR=$(cd "$(dirname "$0")";pwd)
-curl -s $TOOLS/update-ansible-hosts.sh | /bin/bash
 curl -s $TOOLS/mk-backup.sh | /bin/bash
 echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info from $THIS_DIR to /var/k8s/bak."
 sleep $WAIT
