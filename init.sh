@@ -284,6 +284,17 @@ STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - approve certificate:"
   curl -s $SCRIPTS/approve-pem.sh | /bin/bash
+  FILE=approve-pem.sh
+  cat > $FILE <<"EOF"
+#!/bin/bash
+CSRS=$(kubectl get csr | grep Pending | awk -F ' ' '{print $1}')
+if [ -n "$CSRS" ]; then
+  for CSR in $CSRS; do
+    kubectl certificate approve $CSR
+  done
+fi
+EOF
+  chmod +x $FILE
   echo $STAGE > ./${STAGE_FILE}
 fi
 
@@ -318,16 +329,5 @@ echo " - With masters: $N_MASTER"
 THIS_DIR=$(cd "$(dirname "$0")";pwd)
 curl -s $SCRIPTS/mk-backup.sh | /bin/bash
 echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info from $THIS_DIR to /var/k8s/bak."
-FILE=approve-pem.sh
-cat > $FILE <<"EOF"
-#!/bin/bash
-CSRS=$(kubectl get csr | grep Pending | awk -F ' ' '{print $1}')
-if [ -n "$CSRS" ]; then
-  for CSR in $CSRS; do
-    kubectl certificate approve $CSR
-  done
-fi
-EOF
-chmod +x $FILE
 sleep $WAIT 
 exit 0
