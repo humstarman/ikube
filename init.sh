@@ -153,8 +153,6 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_MASTER masters: $(cat ./master.csv)."
   if ${REUSE}; then
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - reuse master as node."
-    REUSE_NODE=${MASTER} 
-    NODE=$(MASTER),${NODE}
   else
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - NOT reuse master as node."
   fi
@@ -196,6 +194,7 @@ export HA=${HA}
 export CNI=${CNI}
 export PROXY=${PROXY}
 export VERSION=${VERSION}
+export REUSE=${REUSE}
 EOF
   fi
   curl -s $SCRIPTS/mk-ansible-available.sh | /bin/bash
