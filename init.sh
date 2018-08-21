@@ -4,11 +4,12 @@ DEFAULT_CNI=flannel
 DEFAULT_HA=nginx
 DEFAULT_PROXY=iptables
 DEFAULT_VERSION=v1.11.0
+DEFAULT_REUSE=true
 show_help () {
 cat << USAGE
 usage: $0 [ -m MASTER(S) ] [ -n NODE(S) ] [ -v VIRTUAL-IP ] [ -p PASSORD ]
        [ -c CNI ] [ -a HA-STRATEGY ] [ -x PROXY-STATEGY ] [ -k KUBE-VERSION ]
-       [ -b BRANCH ] [ -s SCRIPT-BRANCH ]
+       [ -r REUSE-MASTER-AS-NODE ] [ -b BRANCH ] [ -s SCRIPT-BRANCH ]
 use to deploy Kubernetes.
 
     -m : Specify the IP address(es) of Master node(s). If multiple, set the masters in term of csv, 
@@ -28,6 +29,8 @@ use to deploy Kubernetes.
          If not specified, use "$DEFAULT_PROXY" by default.
     -k : Specify the version of Kubernetes to install.  
          If not specified, install "$DEFAULT_VERSION" by default.
+    -r : Define if reusing master as node, which means installing node components on master or not.
+         If not specified, reuse master as node by default. 
 
     debug setting:
     -b : Specify the branch of code. 
@@ -40,7 +43,7 @@ USAGE
 exit 0
 }
 # Get Opts
-while getopts "hm:v:n:p:c:a:x:k:b:s:" opt; do # 选项后面的冒号表示该选项需要参数
+while getopts "hm:v:n:p:c:a:x:k:b:s:r" opt; do # 选项后面的冒号表示该选项需要参数
     case "$opt" in
     h)  show_help
         ;;
@@ -64,6 +67,8 @@ while getopts "hm:v:n:p:c:a:x:k:b:s:" opt; do # 选项后面的冒号表示该�
         ;;
     s)  STAGES_BRANCH=$OPTARG
         ;;
+    r)  REUSE=false 
+        ;;
     ?)  # 当有不认识的选项的时候arg为?
         echo "unkonw argument"
         exit 1
@@ -77,6 +82,7 @@ VERSION=${VERSION:-"${DEFAULT_VERSION}"}
 BRANCH=${BRANCH:-"master"}
 STAGES_BRANCH=${STAGES_BRANCH:-"${BRANCH}"}
 PROXY=${PROXY:-"${DEFAULT_PROXY}"}
+REUSE=${REUSE:-"${DEFAULT_REUSE}"}
 chk_var () {
 if [ -z "$2" ]; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [ERROR] - no input for \"$1\", try \"$0 -h\"."
@@ -145,6 +151,13 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   N_MASTER=$(echo $MASTER | wc -w)
   #echo $N_MASTER
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_MASTER masters: $(cat ./master.csv)."
+  if ${REUSE}; then
+    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - reuse master as node."
+    REUSE_NODE=${MASTER} 
+    NODE=$(MASTER),${NODE}
+  else
+    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - NOT reuse master as node."
+  fi
   if [ -z "$NODE" ]; then
     NODE_EXISTENCE=false
   else
