@@ -156,7 +156,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   #echo $MASTER
   N_MASTER=$(echo $MASTER | wc -w)
   #echo $N_MASTER
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_MASTER masters: $(cat ./master.csv)."
+  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_MASTER masters: $(cat ./${MASTER_GROUP}.csv)."
   if ${REUSE}; then
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - reuse master as node."
     if [ -z "$ONLY_NODE" ]; then
@@ -184,7 +184,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
     #echo ${NODE}
     N_NODE=$(echo $NODE | wc -w)
     #echo $N_NODE
-    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_NODE nodes: $(cat ./node.csv)."
+    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_NODE nodes: $(cat ./${NODE_GROUP}.csv)."
   else
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - no node to install."
   fi
@@ -343,10 +343,10 @@ fi
 # ending
 MASTER=$(sed s/","/" "/g ./master.csv)
 N_MASTER=$(echo $MASTER | wc -w)
-if [ ! -f ./node.csv ]; then
+if [ ! -f ./${NODE_GROUP}.csv ]; then
   N_NODE=0
 else
-  NODE=$(cat ./node.csv | tr "," " ")
+  NODE=$(cat ./${NODE_GROUP}.csv | tr "," " ")
   N_NODE=$(echo $NODE | wc -w)
   [ -z "$N_NODE" ] && N_NODE=0
 fi 
