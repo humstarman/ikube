@@ -178,6 +178,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   else
     ONLY_NODE_EXISTENCE=true
     echo ${ONLY_NODE} > ./${ONLY_GROUP}.csv
+    ONLY_NODE=$(echo $ONLY_NODE | tr "," " ")
   fi
   if $NODE_EXISTENCE; then
     NODE=$(echo $NODE | tr "," " ")
