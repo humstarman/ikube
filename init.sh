@@ -368,7 +368,7 @@ echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info fro
 sleep $WAIT 
 TEXT="finished_install_kubernetes"
 DESP=$(cat <<EOF
-## at $(date -d today +'%Y-%m-%d %H:%M:%S')  
+at $(date -d today +'%Y-%m-%d %H:%M:%S')  
 elapsed: $ELAPSED sec, approximately $MINUTE ~ $[$MINUTE+1] min
 EOF
 )
