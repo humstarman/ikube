@@ -151,7 +151,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   fi
   curl -s -O ${VERSION}/version
   curl -s $SCRIPTS/check-ansible.sh | /bin/bash
-  echo $MASTER > ./master.csv
+  echo $MASTER > ./${MASTER_GROUP}.csv
   MASTER=$(echo $MASTER | tr "," " ")
   #echo $MASTER
   N_MASTER=$(echo $MASTER | wc -w)
@@ -171,7 +171,13 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
     NODE_EXISTENCE=false
   else
     NODE_EXISTENCE=true
-    echo $NODE > ./node.csv
+    echo $NODE > ./${NODE_GROUP}.csv
+  fi
+  if [ -z "${ONLY_NODE}" ]; then
+    ONLY_NODE_EXISTENCE=false
+  else
+    ONLY_NODE_EXISTENCE=true
+    echo ${ONLY_NODE} > ./${ONLY_GROUP}.csv
   fi
   if $NODE_EXISTENCE; then
     NODE=$(echo $NODE | tr "," " ")
@@ -210,6 +216,7 @@ export REUSE=${REUSE}
 export NODE_GROUP=${NODE_GROUP}
 export MASTER_GROUP=${MASTER_GROUP}
 export ONLY_GROUP=${ONLY_GROUP}
+export ONLY_NODE_EXISTENCE=${ONLY_NODE_EXISTENCE}
 EOF
   fi
   curl -s $SCRIPTS/mk-ansible-available.sh | /bin/bash
