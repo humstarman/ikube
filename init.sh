@@ -51,7 +51,7 @@ while getopts "hm:v:n:p:c:a:x:k:b:s:r" opt; do # 选项后面的冒号表示该�
         ;;
     v)  VIP=$OPTARG
         ;;
-    n)  NODE=$OPTARG
+    n)  ONLY_NODE=$OPTARG
         ;;
     p)  PASSWD=$OPTARG
         ;;
@@ -94,7 +94,7 @@ chk_var -m $MASTER
 [[ "vip" == "${HA}" ]] && chk_var -v $VIP
 chk_var -p $PASSWD
 if ! ${REUSE}; then
-  chk_var -n $NODE
+  chk_var -n ${ONLY_NODE}
 fi
 # 0 set env
 START=$(date +%s)
@@ -104,6 +104,7 @@ STAGE_FILE=stage.init
 ANSIBLE_GROUP=k8s
 MASTER_GROUP=master
 NODE_GROUP=node
+ONLY_GROUP=only
 if [ ! -f ./${STAGE_FILE} ]; then
   touch ./${STAGE_FILE}
   echo 0 > ./${STAGE_FILE} 
@@ -158,10 +159,10 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_MASTER masters: $(cat ./master.csv)."
   if ${REUSE}; then
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - reuse master as node."
-    if [ -z "$NODE" ]; then
+    if [ -z "$ONLY_NODE" ]; then
       NODE=${MASTER}
     else
-      NODE=${MASTER},${NODE}
+      NODE=${MASTER},${ONLY_NODE}
     fi
   else
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - NOT reuse master as node."
@@ -194,6 +195,7 @@ export MASTER="$MASTER"
 export N_MASTER=$N_MASTER
 export NODE_EXISTENCE=$NODE_EXISTENCE
 export NODE="$NODE"
+export ONLY_NODE="$ONLY_NODE"
 export N_NODE=$N_NODE
 export VIP=$VIP
 export SCRIPTS=${SCRIPTS}
@@ -207,6 +209,7 @@ export VERSION=${VERSION}
 export REUSE=${REUSE}
 export NODE_GROUP=${NODE_GROUP}
 export MASTER_GROUP=${MASTER_GROUP}
+export ONLY_GROUP=${ONLY_GROUP}
 EOF
   fi
   curl -s $SCRIPTS/mk-ansible-available.sh | /bin/bash
