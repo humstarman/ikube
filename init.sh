@@ -367,7 +367,6 @@ echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info fro
 sleep $WAIT 
 TEXT="finished_install_kubernetes"
 DESP="## at $(date -d today +'%Y-%m-%d %H:%M:%S')"
-echo $DESP
 URL=https://sc.ftqq.com/SCU31080T5747dd558f09b5ecab28adf0b081d80b5b7cdf2331e11.send
 curl -d "text=${TEXT}&desp=${DESP}" -X POST ${URL}
 exit 0
