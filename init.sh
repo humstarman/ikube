@@ -93,13 +93,17 @@ fi
 chk_var -m $MASTER
 [[ "vip" == "${HA}" ]] && chk_var -v $VIP
 chk_var -p $PASSWD
+if ! ${REUSE}; then
+  chk_var -n $NODE
+fi
 # 0 set env
 START=$(date +%s)
 WAIT=3
 STAGE=0
 STAGE_FILE=stage.init
 ANSIBLE_GROUP=k8s
-NODE_GROUP=nodes
+MASTER_GROUP=master
+NODE_GROUP=node
 if [ ! -f ./${STAGE_FILE} ]; then
   touch ./${STAGE_FILE}
   echo 0 > ./${STAGE_FILE} 
@@ -154,6 +158,11 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_MASTER masters: $(cat ./master.csv)."
   if ${REUSE}; then
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - reuse master as node."
+    if [ -z "$NODE" ]; then
+      NODE=${MASTER}
+    else
+      NODE=${MASTER},${NODE}
+    fi
   else
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - NOT reuse master as node."
   fi
@@ -197,6 +206,7 @@ export PROXY=${PROXY}
 export VERSION=${VERSION}
 export REUSE=${REUSE}
 export NODE_GROUP=${NODE_GROUP}
+export MASTER_GROUP=${MASTER_GROUP}
 EOF
   fi
   curl -s $SCRIPTS/mk-ansible-available.sh | /bin/bash
