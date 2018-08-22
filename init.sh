@@ -9,7 +9,8 @@ show_help () {
 cat << USAGE
 usage: $0 [ -m MASTER(S) ] [ -n NODE(S) ] [ -v VIRTUAL-IP ] [ -p PASSORD ]
        [ -c CNI ] [ -a HA-STRATEGY ] [ -x PROXY-STATEGY ] [ -k KUBE-VERSION ]
-       [ -r REUSE-MASTER-AS-NODE ] [ -b BRANCH ] [ -s SCRIPT-BRANCH ]
+       [ -r REUSE-MASTER-AS-NODE ] [ -t SMS-TO ]
+       [ -b BRANCH ] [ -s SCRIPT-BRANCH ]
 use to deploy Kubernetes.
 
     -m : Specify the IP address(es) of Master node(s). If multiple, set the masters in term of csv, 
@@ -31,6 +32,7 @@ use to deploy Kubernetes.
          If not specified, install "$DEFAULT_VERSION" by default.
     -r : Define if reusing master as node, which means installing node components on master or not.
          If not specified, reuse master as node by default. 
+    -t : Specify the SCKEY of the user to send note to.
 
     debug setting:
     -b : Specify the branch of code. 
@@ -43,7 +45,7 @@ USAGE
 exit 0
 }
 # Get Opts
-while getopts "hm:v:n:p:c:a:x:k:b:s:r" opt; do # 选项后面的冒号表示该选项需要参数
+while getopts "hm:v:n:p:c:a:x:k:b:s:rt:" opt; do # 选项后面的冒号表示该选项需要参数
     case "$opt" in
     h)  show_help
         ;;
@@ -68,6 +70,8 @@ while getopts "hm:v:n:p:c:a:x:k:b:s:r" opt; do # 选项后面的冒号表示该�
     s)  STAGES_BRANCH=$OPTARG
         ;;
     r)  REUSE=false 
+        ;;
+    x)  SCKEY=$OPTARG
         ;;
     ?)  # 当有不认识的选项的时候arg为?
         echo "unkonw argument"
@@ -366,12 +370,14 @@ THIS_DIR=$(cd "$(dirname "$0")";pwd)
 curl -s $SCRIPTS/mk-backup.sh | /bin/bash
 echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info from $THIS_DIR to /var/k8s/bak."
 sleep $WAIT 
-TEXT="finished_install_kubernetes"
-DESP=$(cat <<EOF
+if [ -n "${SCKEY}" ]; then
+  TEXT="finished_install_kubernetes"
+  DESP=$(cat <<EOF
 at $(date -d today +'%Y-%m-%d %H:%M:%S')  
 elapsed: $ELAPSED sec, approximately $MINUTE ~ $[$MINUTE+1] min
 EOF
-)
-URL=https://sc.ftqq.com/SCU31080T5747dd558f09b5ecab28adf0b081d80b5b7cdf2331e11.send
-curl -d "text=${TEXT}&desp=${DESP}" -X POST ${URL}
+  )
+  URL=https://sc.ftqq.com/${SCKEY}.send
+  curl -d "text=${TEXT}&desp=${DESP}" -X POST ${URL}
+fi
 exit 0
