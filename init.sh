@@ -343,7 +343,7 @@ if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
 fi
 
 # ending
-MASTER=$(sed s/","/" "/g ./master.csv)
+MASTER=$(sed s/","/" "/g ./${MASTER_GROUP}.csv)
 N_MASTER=$(echo $MASTER | wc -w)
 if [ ! -f ./${NODE_GROUP}.csv ]; then
   N_NODE=0
