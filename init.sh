@@ -99,6 +99,7 @@ WAIT=3
 STAGE=0
 STAGE_FILE=stage.init
 ANSIBLE_GROUP=k8s
+NODE_GROUP=nodes
 if [ ! -f ./${STAGE_FILE} ]; then
   touch ./${STAGE_FILE}
   echo 0 > ./${STAGE_FILE} 
@@ -195,6 +196,7 @@ export CNI=${CNI}
 export PROXY=${PROXY}
 export VERSION=${VERSION}
 export REUSE=${REUSE}
+export NODE_GROUP=${NODE_GROUP}
 EOF
   fi
   curl -s $SCRIPTS/mk-ansible-available.sh | /bin/bash
