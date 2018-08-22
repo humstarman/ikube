@@ -337,7 +337,7 @@ fi
 # 11 clearance 
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
-  [ -f "./node.csv" ] || touch node.csv
+  [ -f "./${NODE_GROUP}.csv" ] || touch ${NODE_GROUP}.csv
   curl -s $SCRIPTS/clearance.sh | /bin/bash
   echo $STAGE > ./${STAGE_FILE}
 fi
@@ -367,7 +367,11 @@ curl -s $SCRIPTS/mk-backup.sh | /bin/bash
 echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info from $THIS_DIR to /var/k8s/bak."
 sleep $WAIT 
 TEXT="finished_install_kubernetes"
-DESP="## at $(date -d today +'%Y-%m-%d %H:%M:%S')"
+DESP=$(cat <<EOF
+## at $(date -d today +'%Y-%m-%d %H:%M:%S')  
+elapsed: $ELAPSED sec, approximately $MINUTE ~ $[$MINUTE+1] min
+EOF
+)
 URL=https://sc.ftqq.com/SCU31080T5747dd558f09b5ecab28adf0b081d80b5b7cdf2331e11.send
 curl -d "text=${TEXT}&desp=${DESP}" -X POST ${URL}
 exit 0
