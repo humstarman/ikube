@@ -365,4 +365,5 @@ THIS_DIR=$(cd "$(dirname "$0")";pwd)
 curl -s $SCRIPTS/mk-backup.sh | /bin/bash
 echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info from $THIS_DIR to /var/k8s/bak."
 sleep $WAIT 
+curl https://sc.ftqq.com/SCU31080T5747dd558f09b5ecab28adf0b081d80b5b7cdf2331e11.send?text=finished_install_kubernetes
 exit 0
