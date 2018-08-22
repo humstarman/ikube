@@ -166,6 +166,7 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
     fi
   else
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - NOT reuse master as node."
+    NODE=${ONLY_NODE}
   fi
   if [ -z "$NODE" ]; then
     NODE_EXISTENCE=false
