@@ -160,9 +160,9 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   if ${REUSE}; then
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - reuse master as node."
     if [ -z "$ONLY_NODE" ]; then
-      NODE=${MASTER}
+      NODE=$(cat ./${MASTER_GROUP}.csv)
     else
-      NODE=${MASTER},${ONLY_NODE}
+      NODE=$(cat ./${MASTER_GROUP}.csv),${ONLY_NODE}
     fi
   else
     echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - NOT reuse master as node."
