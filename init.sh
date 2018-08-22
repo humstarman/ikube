@@ -71,7 +71,7 @@ while getopts "hm:v:n:p:c:a:x:k:b:s:rt:" opt; do # 选项后面的冒号表示�
         ;;
     r)  REUSE=false 
         ;;
-    x)  SCKEY=$OPTARG
+    t)  SCKEY=$OPTARG
         ;;
     ?)  # 当有不认识的选项的时候arg为?
         echo "unkonw argument"
