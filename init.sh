@@ -32,7 +32,8 @@ use to deploy Kubernetes.
          If not specified, install "$DEFAULT_VERSION" by default.
     -r : Define if reusing master as node, which means installing node components on master or not.
          If not specified, reuse master as node by default. 
-    -t : Specify the SCKEY of the user to send note to.
+    -t : Specify the SCKEY of the user to send note to. If multiple, set the keys in term of csv, 
+         as 'key-1,key-2,key-3'. 
 
     debug setting:
     -b : Specify the branch of code. 
@@ -371,13 +372,16 @@ curl -s $SCRIPTS/mk-backup.sh | /bin/bash
 echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info from $THIS_DIR to /var/k8s/bak."
 sleep $WAIT 
 if [ -n "${SCKEY}" ]; then
+  SCKEY=$(echo ${SCKEY} | tr "," " ")
   TEXT="finished_install_kubernetes"
   DESP=$(cat <<EOF
 at $(date -d today +'%Y-%m-%d %H:%M:%S')  
 elapsed: $ELAPSED sec, approximately $MINUTE ~ $[$MINUTE+1] min
 EOF
   )
-  URL=https://sc.ftqq.com/${SCKEY}.send
-  curl -d "text=${TEXT}&desp=${DESP}" -X POST ${URL}
+  for KEY in ${SCKEY}; do
+    URL=https://sc.ftqq.com/${KEY}.send
+    curl -d "text=${TEXT}&desp=${DESP}" -X POST ${URL}
+  done
 fi
 exit 0
