@@ -370,10 +370,9 @@ echo " - With masters: $N_MASTER"
 THIS_DIR=$(cd "$(dirname "$0")";pwd)
 curl -s $SCRIPTS/mk-backup.sh | /bin/bash
 echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info from $THIS_DIR to /var/k8s/bak."
-sleep $WAIT 
 if [ -n "${SCKEY}" ]; then
   SCKEY=$(echo ${SCKEY} | tr "," " ")
-  TEXT="finished_install_kubernetes"
+  TEXT="finished install kubernetes"
   DESP=$(cat <<EOF
 at $(date -d today +'%Y-%m-%d %H:%M:%S')  
 elapsed: $ELAPSED sec, approximately $MINUTE ~ $[$MINUTE+1] min
@@ -384,4 +383,5 @@ EOF
     curl -d "text=${TEXT}&desp=${DESP}" -X POST ${URL}
   done
 fi
+sleep $WAIT 
 exit 0
