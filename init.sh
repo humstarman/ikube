@@ -1,15 +1,15 @@
 #!/bin/bash
-set -e
+set -ex
 DEFAULT_CNI=flannel
 DEFAULT_HA=nginx
 DEFAULT_PROXY=iptables
-DEFAULT_VERSION=v1.11.0
+DEFAULT_VERSION=v1.11.1
 DEFAULT_REUSE=true
 show_help () {
 cat << USAGE
-usage: $0 [ -m MASTER(S) ] [ -n NODE(S) ] [ -v VIRTUAL-IP ] [ -p PASSORD ]
-       [ -c CNI ] [ -a HA-STRATEGY ] [ -x PROXY-STATEGY ] [ -k KUBE-VERSION ]
-       [ -r REUSE-MASTER-AS-NODE ] [ -t SMS-TO ]
+usage: $0 [ -m MASTER(S) ] [ -n NODE(S) ] [ -i VIRTUAL-IP ] [ -p PASSORD ]
+       [ -c CNI ] [ -a HA-STRATEGY ] [ -x PROXY-STATEGY ] [ -v KUBE-VERSION ]
+       [ -r REUSE-MASTER-AS-NODE ] [ -k SCKEY ]
        [ -b BRANCH ] [ -s SCRIPT-BRANCH ]
 use to deploy Kubernetes.
 
@@ -23,16 +23,16 @@ use to deploy Kubernetes.
          If not specified, no nodes would be installed.
     -a : Specify the HA strategy, for instance: "nginx" or "vip".  
          If not specified, use "$DEFAULT_HA" by default.
-    -v : Specify the virtual IP address. 
+    -i : Specify the virtual IP address. 
     -c : Specify the CNI strategy, for instance: "flannel" or "calico".  
          If not specified, use "$DEFAULT_CNI" by default.
     -x : Specify the proxy strategy, for instance: "iptables" or "ipvs".  
          If not specified, use "$DEFAULT_PROXY" by default.
-    -k : Specify the version of Kubernetes to install.  
+    -v : Specify the version of Kubernetes to install.  
          If not specified, install "$DEFAULT_VERSION" by default.
     -r : Define if reusing master as node, which means installing node components on master or not.
          If not specified, reuse master as node by default. 
-    -t : Specify the SCKEY of the user to send note to. If multiple, set the keys in term of csv, 
+    -k : Specify the SCKEY of the user to send note to. If multiple, set the keys in term of csv, 
          as 'key-1,key-2,key-3'. 
 
     debug setting:
@@ -46,13 +46,13 @@ USAGE
 exit 0
 }
 # Get Opts
-while getopts "hm:v:n:p:c:a:x:k:b:s:rt:" opt; do # 选项后面的冒号表示该选项需要参数
+while getopts "hm:p:n:a:i:c:x:v:rk:b:s:" opt; do # 选项后面的冒号表示该选项需要参数
     case "$opt" in
     h)  show_help
         ;;
     m)  MASTER=$OPTARG # 参数存在$OPTARG中
         ;;
-    v)  VIP=$OPTARG
+    i)  VIP=$OPTARG
         ;;
     n)  ONLY_NODE=$OPTARG
         ;;
@@ -64,7 +64,7 @@ while getopts "hm:v:n:p:c:a:x:k:b:s:rt:" opt; do # 选项后面的冒号表示�
         ;;
     x)  PROXY=$OPTARG
         ;;
-    k)  VERSION=$OPTARG
+    v)  VERSION=$OPTARG
         ;;
     b)  BRANCH=$OPTARG
         ;;
@@ -72,7 +72,7 @@ while getopts "hm:v:n:p:c:a:x:k:b:s:rt:" opt; do # 选项后面的冒号表示�
         ;;
     r)  REUSE=false 
         ;;
-    t)  SCKEY=$OPTARG
+    k)  SCKEY=$OPTARG
         ;;
     ?)  # 当有不认识的选项的时候arg为?
         echo "unkonw argument"
