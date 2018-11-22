@@ -40,7 +40,7 @@ fi
 chk_var -r $ROLE
 chk_var -i $IPS
 STAGE=0
-STAGE_FILE=stage.addons
+STAGE_FILE=stage.join
 if [ ! -f ./${STAGE_FILE} ]; then
   touch ./${STAGE_FILE}
   echo 0 > ./${STAGE_FILE}
