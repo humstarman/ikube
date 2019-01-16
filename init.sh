@@ -95,6 +95,9 @@ if [ -z "$2" ]; then
   exit 1
 fi
 }
+info() {
+    echo $(date) - [INFO] - "$*"
+}
 chk_var -m $MASTER
 [[ "vip" == "${HA}" ]] && chk_var -v $VIP
 chk_var -p $PASSWD
@@ -129,7 +132,7 @@ getScript () {
   if [ -f "./$SCRIPT" ]; then
     chmod +x ./$SCRIPT
   else
-    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [ERROR] - downloading failed !!!" 
+    echo "$(date) - [ERROR] - downloading failed !!!" 
     echo " - $URL/$SCRIPT"
     echo " - Please check !!!"
     sleep 3
@@ -142,7 +145,7 @@ SCRIPTS=https://raw.githubusercontent.com/humstarman/${PROJECT}-scripts/${BRANCH
 MANIFESTS=https://raw.githubusercontent.com/humstarman/${PROJECT}-manifests/${BRANCH}
 VERSION=https://raw.githubusercontent.com/humstarman/${PROJECT}-version/${VERSION}
 if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - checking environment ... "
+  info checking environment ...
   # check curl & 
   if [ ! -x "$(command -v curl)" ]; then
     if [ -x "$(command -v yum)" ]; then
@@ -161,16 +164,16 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
   #echo $MASTER
   N_MASTER=$(echo $MASTER | wc -w)
   #echo $N_MASTER
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_MASTER masters: $(cat ./${MASTER_GROUP}.csv)."
+  info $N_MASTER masters: $(cat ./${MASTER_GROUP}.csv)
   if ${REUSE}; then
-    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - reuse master as node."
+    info reuse master as node
     if [ -z "$ONLY_NODE" ]; then
       NODE=$(cat ./${MASTER_GROUP}.csv)
     else
       NODE=$(cat ./${MASTER_GROUP}.csv),${ONLY_NODE}
     fi
   else
-    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - NOT reuse master as node."
+    info NOT reuse master as node
     NODE=${ONLY_NODE}
   fi
   if [ -z "$NODE" ]; then
@@ -191,13 +194,13 @@ if [[ "$(cat ./${STAGE_FILE})" == "0" ]]; then
     #echo ${NODE}
     N_NODE=$(echo $NODE | wc -w)
     #echo $N_NODE
-    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - $N_NODE nodes: $(cat ./${NODE_GROUP}.csv)."
+    info $N_NODE nodes: $(cat ./${NODE_GROUP}.csv)
   else
-    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - no node to install."
+    info no node to install
   fi
   if [ -n "$VIP" ]; then
     echo $VIP > ./vip.info
-    echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - virtual IP: $(cat ./vip.info)."
+    info virtual IP: $(cat ./vip.info)
   fi
   echo $PASSWD > ./passwd.log
   # mk env file
@@ -227,19 +230,19 @@ export ONLY_NODE_EXISTENCE=${ONLY_NODE_EXISTENCE}
 EOF
   fi
   curl -s $SCRIPTS/mk-ansible-available.sh | /bin/bash
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - connectivity checked."
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - environment checked."
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - prepare to install."
+  info connectivity checked
+  info environment checked
+  info prepare to install
   ## 1 stop selinux
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - shutdown Selinux."
+  info shutdown Selinux
   getScript $SCRIPTS shutdown-selinux.sh
   ansible ${ANSIBLE_GROUP} -m script -a ./shutdown-selinux.sh
   ## 2 stop firewall
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - stop firewall."
+  info stop firewall
   getScript $SCRIPTS stop-firewall.sh
   ansible ${ANSIBLE_GROUP} -m script -a ./stop-firewall.sh
   ## 3 mkdirs
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - prepare directories."
+  info prepare directories
   getScript $SCRIPTS batch-mkdir.sh
   ansible ${ANSIBLE_GROUP} -m script -a ./batch-mkdir.sh
 fi
@@ -247,9 +250,9 @@ fi
 # 1 environment variables
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - config cluster environment variables ... "
+  info config cluster environment variables ...
   curl -s $STAGES/cluster-environment-variables.sh | /bin/bash
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - cluster environment variables configured. "
+  info cluster environment variables configured
   echo $STAGE > ./${STAGE_FILE}
 fi
 
@@ -323,7 +326,7 @@ fi
 # 10 approve certificate
 STAGE=$[${STAGE}+1]
 if [[ "$(cat ./${STAGE_FILE})" -lt "$STAGE" ]]; then
-  echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - approve certificate:"
+  info approve certificate:
   curl -s $SCRIPTS/approve-pem.sh | /bin/bash
   FILE=approve-pem.sh
   cat > $FILE <<"EOF"
@@ -361,7 +364,7 @@ TOTAL=$[${N_MASTER}+${N_NODE}]
 END=$(date +%s)
 ELAPSED=$[$END-$START]
 MINUTE=$[$ELAPSED/60]
-echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - summary: "
+info summary:
 echo " - Kubernetes installation elapsed: $ELAPSED sec, approximately $MINUTE ~ $[$MINUTE+1] min."
 echo " - Kubernetes paltform: "
 echo " - Total nodes: $TOTAL"
@@ -369,12 +372,12 @@ echo " - With masters: $N_MASTER"
 ## make backup
 THIS_DIR=$(cd "$(dirname "$0")";pwd)
 curl -s $SCRIPTS/mk-backup.sh | /bin/bash
-echo "$(date -d today +'%Y-%m-%d %H:%M:%S') - [INFO] - backup important info from $THIS_DIR to /var/k8s/bak."
+info backup important info from $THIS_DIR to /var/k8s/bak
 if [ -n "${SCKEY}" ]; then
   SCKEY=$(echo ${SCKEY} | tr "," " ")
   TEXT="finished install kubernetes"
   DESP=$(cat <<EOF
-at $(date -d today +'%Y-%m-%d %H:%M:%S')  
+at $(date)  
 elapsed: $ELAPSED sec, approximately $MINUTE ~ $[$MINUTE+1] min
 EOF
   )
